@@ -1,0 +1,910 @@
+================================================================================
+                    SUPPLY CHAIN DASHBOARD - BACKEND INTEGRATION GUIDE
+================================================================================
+
+Table of Contents:
+1. Overview & Architecture
+2. Backend Technology Stack Options
+3. Database Design & Schema
+4. API Endpoint Requirements
+5. Frontend Integration Steps
+6. Manual Warehouse Management
+7. System Updates & Maintenance
+8. Security Considerations
+9. Deployment & Scaling
+10. Troubleshooting & Support
+
+================================================================================
+1. OVERVIEW & ARCHITECTURE
+================================================================================
+
+Current State:
+- Frontend dashboard with simulated data
+- Client-side authentication (demo purposes)
+- Static warehouse and inventory data
+
+Target State:
+- Full backend integration with REST APIs
+- Real-time database connectivity
+- Live warehouse management system
+- User authentication with database
+- Automated data synchronization
+
+Recommended Architecture:
+Frontend (Current Dashboard) → API Gateway → Backend Services → Database
+                             ↓
+                        Authentication Service
+                        Warehouse Service
+                        Inventory Service
+                        Supply Chain Service
+
+================================================================================
+2. BACKEND TECHNOLOGY STACK OPTIONS
+================================================================================
+
+Option A: Node.js Stack (Recommended)
+- Runtime: Node.js 18+
+- Framework: Express.js or Fastify
+- Database: PostgreSQL or MongoDB
+- ORM: Prisma (for PostgreSQL) or Mongoose (for MongoDB)
+- Authentication: JWT + bcrypt
+- Real-time: Socket.io (optional)
+
+Option B: Python Stack
+- Framework: FastAPI or Django REST
+- Database: PostgreSQL or SQLite
+- ORM: SQLAlchemy or Django ORM
+- Authentication: JWT + passlib
+
+Option C: Java Stack
+- Framework: Spring Boot
+- Database: PostgreSQL or MySQL
+- ORM: JPA/Hibernate
+- Authentication: Spring Security + JWT
+
+Option D: .NET Stack
+- Framework: ASP.NET Core Web API
+- Database: SQL Server or PostgreSQL
+- ORM: Entity Framework Core
+- Authentication: Identity Framework + JWT
+
+================================================================================
+3. DATABASE DESIGN & SCHEMA
+================================================================================
+
+Core Tables Required:
+
+-- Users Table
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    role VARCHAR(20) DEFAULT 'viewer',
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW(),
+    is_active BOOLEAN DEFAULT TRUE
+);
+
+-- Warehouses Table
+CREATE TABLE warehouses (
+    id VARCHAR(10) PRIMARY KEY, -- WH001, WH002, etc.
+    name VARCHAR(100) NOT NULL,
+    location VARCHAR(100) NOT NULL,
+    address TEXT,
+    capacity INTEGER DEFAULT 0,
+    current_utilization DECIMAL(5,2) DEFAULT 0.00,
+    manager_id INTEGER REFERENCES users(id),
+    status VARCHAR(20) DEFAULT 'active',
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Categories Table
+CREATE TABLE categories (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(50) UNIQUE NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Items Table
+CREATE TABLE items (
+    id SERIAL PRIMARY KEY,
+    item_number VARCHAR(50) UNIQUE NOT NULL, -- ITM-WH001-001
+    name VARCHAR(100) NOT NULL,
+    description TEXT,
+    category_id INTEGER REFERENCES categories(id),
+    unit_of_measure VARCHAR(20) DEFAULT 'units',
+    min_stock_level INTEGER DEFAULT 0,
+    max_stock_level INTEGER DEFAULT 1000,
+    reorder_point INTEGER DEFAULT 100,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Inventory Table
+CREATE TABLE inventory (
+    id SERIAL PRIMARY KEY,
+    warehouse_id VARCHAR(10) REFERENCES warehouses(id),
+    item_id INTEGER REFERENCES items(id),
+    current_quantity INTEGER DEFAULT 0,
+    reserved_quantity INTEGER DEFAULT 0,
+    available_quantity INTEGER GENERATED ALWAYS AS (current_quantity - reserved_quantity) STORED,
+    last_count_date DATE,
+    last_updated TIMESTAMP DEFAULT NOW(),
+    UNIQUE(warehouse_id, item_id)
+);
+
+-- Supply Orders Table
+CREATE TABLE supply_orders (
+    id SERIAL PRIMARY KEY,
+    order_number VARCHAR(50) UNIQUE NOT NULL,
+    warehouse_id VARCHAR(10) REFERENCES warehouses(id),
+    item_id INTEGER REFERENCES items(id),
+    quantity_ordered INTEGER NOT NULL,
+    quantity_received INTEGER DEFAULT 0,
+    status VARCHAR(20) DEFAULT 'need-order', -- need-order, ordered, in-route, delivered
+    order_date TIMESTAMP,
+    expected_delivery_date DATE,
+    actual_delivery_date DATE,
+    supplier_name VARCHAR(100),
+    supplier_contact TEXT,
+    total_cost DECIMAL(10,2),
+    created_by INTEGER REFERENCES users(id),
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Inventory Transactions Table
+CREATE TABLE inventory_transactions (
+    id SERIAL PRIMARY KEY,
+    warehouse_id VARCHAR(10) REFERENCES warehouses(id),
+    item_id INTEGER REFERENCES items(id),
+    transaction_type VARCHAR(20) NOT NULL, -- inbound, outbound, adjustment
+    quantity_change INTEGER NOT NULL,
+    reference_number VARCHAR(50),
+    notes TEXT,
+    created_by INTEGER REFERENCES users(id),
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Dashboard Metrics Table
+CREATE TABLE dashboard_metrics (
+    id SERIAL PRIMARY KEY,
+    metric_name VARCHAR(50) NOT NULL,
+    metric_value DECIMAL(10,2) NOT NULL,
+    metric_unit VARCHAR(20),
+    warehouse_id VARCHAR(10) REFERENCES warehouses(id),
+    date_recorded DATE DEFAULT CURRENT_DATE,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+Sample Data Inserts:
+
+-- Insert sample warehouses
+INSERT INTO warehouses (id, name, location, address, capacity) VALUES
+('WH001', 'NYC Central', 'New York', '123 Industrial Ave, NY 10001', 50000),
+('WH002', 'LA West Coast', 'Los Angeles', '456 Warehouse Blvd, LA 90001', 75000),
+('WH003', 'Chicago Midwest', 'Chicago', '789 Logistics Dr, Chicago 60001', 60000),
+('WH004', 'Miami Southeast', 'Miami', '321 Distribution Way, Miami 33001', 45000),
+('WH005', 'Dallas Southwest', 'Dallas', '654 Supply Chain St, Dallas 75001', 55000);
+
+-- Insert sample categories
+INSERT INTO categories (name, description) VALUES
+('Raw Materials', 'Basic materials used in manufacturing'),
+('Electronics', 'Electronic components and devices'),
+('Textiles', 'Fabric and textile materials');
+
+-- Insert sample items
+INSERT INTO items (item_number, name, category_id, min_stock_level, max_stock_level, reorder_point) VALUES
+('ITM-001', 'Steel Beams', 1, 50, 1000, 200),
+('ITM-002', 'Circuit Boards', 2, 25, 500, 100),
+('ITM-003', 'Cotton Fabric', 3, 100, 2000, 500);
+
+================================================================================
+4. API ENDPOINT REQUIREMENTS
+================================================================================
+
+Authentication Endpoints:
+POST /api/auth/login
+POST /api/auth/logout
+POST /api/auth/refresh
+GET  /api/auth/profile
+
+Warehouse Management:
+GET    /api/warehouses                    - List all warehouses
+GET    /api/warehouses/{id}               - Get specific warehouse
+POST   /api/warehouses                    - Create new warehouse
+PUT    /api/warehouses/{id}               - Update warehouse
+DELETE /api/warehouses/{id}               - Delete warehouse
+GET    /api/warehouses/{id}/inventory     - Get warehouse inventory
+GET    /api/warehouses/{id}/stats         - Get warehouse statistics
+
+Inventory Management:
+GET    /api/inventory                     - List all inventory items
+GET    /api/inventory/search              - Search inventory items
+GET    /api/inventory/{id}                - Get specific inventory item
+PUT    /api/inventory/{id}                - Update inventory item
+POST   /api/inventory/adjustment          - Record inventory adjustment
+GET    /api/inventory/low-stock           - Get low stock items
+GET    /api/inventory/reports             - Generate inventory reports
+
+Supply Orders:
+GET    /api/supply-orders                 - List all supply orders
+POST   /api/supply-orders                 - Create new supply order
+GET    /api/supply-orders/{id}            - Get specific order
+PUT    /api/supply-orders/{id}            - Update order status
+DELETE /api/supply-orders/{id}            - Cancel order
+GET    /api/supply-orders/pending         - Get pending orders
+
+Dashboard Data:
+GET    /api/dashboard/overview            - Get overview metrics
+GET    /api/dashboard/forecast            - Get supply forecast data
+GET    /api/dashboard/charts              - Get chart data
+GET    /api/dashboard/news                - Get supply chain news
+GET    /api/dashboard/alerts              - Get critical alerts
+
+Items Management:
+GET    /api/items                         - List all items
+POST   /api/items                         - Create new item
+GET    /api/items/{id}                    - Get specific item
+PUT    /api/items/{id}                    - Update item
+DELETE /api/items/{id}                    - Delete item
+GET    /api/items/categories              - Get item categories
+
+API Response Format:
+{
+    "success": true,
+    "message": "Operation completed successfully",
+    "data": {
+        // Response data here
+    },
+    "timestamp": "2024-01-01T00:00:00Z"
+}
+
+Error Response Format:
+{
+    "success": false,
+    "message": "Error description",
+    "error": {
+        "code": "ERROR_CODE",
+        "details": "Detailed error information"
+    },
+    "timestamp": "2024-01-01T00:00:00Z"
+}
+
+================================================================================
+5. FRONTEND INTEGRATION STEPS
+================================================================================
+
+Step 1: Update Configuration
+Create a config file: js/config.js
+
+const CONFIG = {
+    API_BASE_URL: 'https://your-api-domain.com/api',
+    // For development: 'http://localhost:3000/api'
+    
+    ENDPOINTS: {
+        AUTH: {
+            LOGIN: '/auth/login',
+            LOGOUT: '/auth/logout',
+            REFRESH: '/auth/refresh'
+        },
+        WAREHOUSES: '/warehouses',
+        INVENTORY: '/inventory',
+        SUPPLY_ORDERS: '/supply-orders',
+        DASHBOARD: '/dashboard'
+    },
+    
+    REFRESH_INTERVALS: {
+        DASHBOARD: 30000,  // 30 seconds
+        INVENTORY: 60000,  // 1 minute
+        ORDERS: 120000     // 2 minutes
+    }
+};
+
+Step 2: Create API Service Layer
+Create: js/api-service.js
+
+class ApiService {
+    constructor() {
+        this.baseUrl = CONFIG.API_BASE_URL;
+        this.token = localStorage.getItem('authToken');
+    }
+
+    async makeRequest(endpoint, options = {}) {
+        const url = `${this.baseUrl}${endpoint}`;
+        const headers = {
+            'Content-Type': 'application/json',
+            ...options.headers
+        };
+
+        if (this.token) {
+            headers.Authorization = `Bearer ${this.token}`;
+        }
+
+        try {
+            const response = await fetch(url, {
+                ...options,
+                headers
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.message || 'API request failed');
+            }
+
+            return data;
+        } catch (error) {
+            console.error('API Error:', error);
+            throw error;
+        }
+    }
+
+    // Authentication methods
+    async login(username, password) {
+        const data = await this.makeRequest(CONFIG.ENDPOINTS.AUTH.LOGIN, {
+            method: 'POST',
+            body: JSON.stringify({ username, password })
+        });
+
+        if (data.success && data.data.token) {
+            this.token = data.data.token;
+            localStorage.setItem('authToken', this.token);
+        }
+
+        return data;
+    }
+
+    async logout() {
+        await this.makeRequest(CONFIG.ENDPOINTS.AUTH.LOGOUT, {
+            method: 'POST'
+        });
+
+        this.token = null;
+        localStorage.removeItem('authToken');
+    }
+
+    // Warehouse methods
+    async getWarehouses() {
+        return await this.makeRequest(CONFIG.ENDPOINTS.WAREHOUSES);
+    }
+
+    async getWarehouseInventory(warehouseId) {
+        return await this.makeRequest(`${CONFIG.ENDPOINTS.WAREHOUSES}/${warehouseId}/inventory`);
+    }
+
+    // Inventory methods
+    async getInventory(filters = {}) {
+        const params = new URLSearchParams(filters);
+        return await this.makeRequest(`${CONFIG.ENDPOINTS.INVENTORY}?${params}`);
+    }
+
+    async updateInventory(itemId, data) {
+        return await this.makeRequest(`${CONFIG.ENDPOINTS.INVENTORY}/${itemId}`, {
+            method: 'PUT',
+            body: JSON.stringify(data)
+        });
+    }
+
+    // Supply order methods
+    async createSupplyOrder(orderData) {
+        return await this.makeRequest(CONFIG.ENDPOINTS.SUPPLY_ORDERS, {
+            method: 'POST',
+            body: JSON.stringify(orderData)
+        });
+    }
+
+    async getSupplyOrders(filters = {}) {
+        const params = new URLSearchParams(filters);
+        return await this.makeRequest(`${CONFIG.ENDPOINTS.SUPPLY_ORDERS}?${params}`);
+    }
+
+    // Dashboard methods
+    async getDashboardData() {
+        return await this.makeRequest(`${CONFIG.ENDPOINTS.DASHBOARD}/overview`);
+    }
+}
+
+Step 3: Update Dashboard JavaScript
+Modify js/dashboard.js to use API service:
+
+// Replace generateWarehouseData() method
+async initWarehouseSystem() {
+    // Initialize API service
+    this.apiService = new ApiService();
+    
+    try {
+        // Load real warehouse data from API
+        const response = await this.apiService.getInventory();
+        this.warehouseData = response.data;
+        
+        // Initialize warehouse table with real data
+        this.populateWarehouseTable();
+        this.initWarehouseControls();
+        
+    } catch (error) {
+        console.error('Failed to load warehouse data:', error);
+        // Fallback to demo data if API fails
+        this.warehouseData = this.generateWarehouseData();
+        this.populateWarehouseTable();
+        this.initWarehouseControls();
+    }
+}
+
+// Update createOrder function
+async function createOrder(index) {
+    if (!window.dashboard || !window.dashboard.warehouseData) return;
+    
+    const item = window.dashboard.warehouseData[index];
+    
+    if (confirm(`Create new supply order for ${item.itemName} at ${item.warehouse.name}?`)) {
+        try {
+            const orderData = {
+                warehouse_id: item.warehouse.id,
+                item_id: item.id,
+                quantity_ordered: 1000, // Default quantity
+                supplier_name: 'Default Supplier'
+            };
+            
+            const response = await window.dashboard.apiService.createSupplyOrder(orderData);
+            
+            if (response.success) {
+                // Refresh data from server
+                await window.dashboard.refreshWarehouseData();
+                alert(`Order created successfully! Order #: ${response.data.order_number}`);
+            }
+        } catch (error) {
+            alert('Failed to create order. Please try again.');
+            console.error('Order creation failed:', error);
+        }
+    }
+}
+
+Step 4: Update Authentication
+Modify js/auth.js to use real authentication:
+
+async handleLogin(e) {
+    e.preventDefault();
+    
+    const userId = document.getElementById('userId').value.trim();
+    const password = document.getElementById('password').value.trim();
+    
+    try {
+        const response = await this.apiService.login(userId, password);
+        
+        if (response.success) {
+            sessionStorage.setItem('currentUser', response.data.user.username);
+            sessionStorage.setItem('userRole', response.data.user.role);
+            
+            this.showSuccess();
+            
+            setTimeout(() => {
+                window.location.href = 'dashboard.html';
+            }, 1500);
+        }
+    } catch (error) {
+        this.showError(error.message || 'Login failed. Please try again.');
+    }
+}
+
+================================================================================
+6. MANUAL WAREHOUSE MANAGEMENT
+================================================================================
+
+Admin Interface Requirements:
+
+Create: admin-warehouse.html
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Warehouse Administration</title>
+    <link rel="stylesheet" href="styles/admin.css">
+</head>
+<body>
+    <div class="admin-container">
+        <h1>Warehouse Management System</h1>
+        
+        <!-- Warehouse Management -->
+        <section class="admin-section">
+            <h2>Warehouse Operations</h2>
+            
+            <div class="action-buttons">
+                <button onclick="addNewWarehouse()">Add New Warehouse</button>
+                <button onclick="bulkImportItems()">Bulk Import Items</button>
+                <button onclick="generateReports()">Generate Reports</button>
+            </div>
+            
+            <div class="warehouse-list">
+                <!-- Populated by JavaScript -->
+            </div>
+        </section>
+        
+        <!-- Item Management -->
+        <section class="admin-section">
+            <h2>Item Management</h2>
+            
+            <form id="itemForm">
+                <input type="text" id="itemName" placeholder="Item Name" required>
+                <input type="text" id="itemNumber" placeholder="Item Number" required>
+                <select id="itemCategory">
+                    <option value="">Select Category</option>
+                </select>
+                <input type="number" id="minStock" placeholder="Min Stock Level">
+                <input type="number" id="maxStock" placeholder="Max Stock Level">
+                <button type="submit">Add Item</button>
+            </form>
+        </section>
+        
+        <!-- Inventory Adjustment -->
+        <section class="admin-section">
+            <h2>Inventory Adjustments</h2>
+            
+            <form id="adjustmentForm">
+                <select id="adjustmentWarehouse"></select>
+                <select id="adjustmentItem"></select>
+                <input type="number" id="adjustmentQuantity" placeholder="Quantity Change">
+                <select id="adjustmentType">
+                    <option value="inbound">Inbound</option>
+                    <option value="outbound">Outbound</option>
+                    <option value="adjustment">Adjustment</option>
+                </select>
+                <textarea id="adjustmentNotes" placeholder="Notes"></textarea>
+                <button type="submit">Record Adjustment</button>
+            </form>
+        </section>
+    </div>
+    
+    <script src="js/admin-warehouse.js"></script>
+</body>
+</html>
+
+JavaScript for Admin Interface:
+
+class WarehouseAdmin {
+    constructor() {
+        this.apiService = new ApiService();
+        this.init();
+    }
+
+    async init() {
+        await this.loadWarehouses();
+        await this.loadItems();
+        await this.loadCategories();
+        this.setupEventListeners();
+    }
+
+    async addNewWarehouse() {
+        const warehouseData = {
+            id: prompt('Warehouse ID (e.g., WH006):'),
+            name: prompt('Warehouse Name:'),
+            location: prompt('Location:'),
+            address: prompt('Address:'),
+            capacity: parseInt(prompt('Capacity:') || '0')
+        };
+
+        if (warehouseData.id && warehouseData.name) {
+            try {
+                const response = await this.apiService.makeRequest('/warehouses', {
+                    method: 'POST',
+                    body: JSON.stringify(warehouseData)
+                });
+
+                if (response.success) {
+                    alert('Warehouse added successfully!');
+                    await this.loadWarehouses();
+                }
+            } catch (error) {
+                alert('Failed to add warehouse: ' + error.message);
+            }
+        }
+    }
+
+    async recordInventoryAdjustment(warehouseId, itemId, quantityChange, type, notes) {
+        try {
+            const response = await this.apiService.makeRequest('/inventory/adjustment', {
+                method: 'POST',
+                body: JSON.stringify({
+                    warehouse_id: warehouseId,
+                    item_id: itemId,
+                    transaction_type: type,
+                    quantity_change: quantityChange,
+                    notes: notes
+                })
+            });
+
+            if (response.success) {
+                alert('Inventory adjustment recorded successfully!');
+                return true;
+            }
+        } catch (error) {
+            alert('Failed to record adjustment: ' + error.message);
+            return false;
+        }
+    }
+
+    async bulkImportItems() {
+        const csvFile = document.createElement('input');
+        csvFile.type = 'file';
+        csvFile.accept = '.csv';
+        csvFile.onchange = async (e) => {
+            const file = e.target.files[0];
+            const text = await file.text();
+            
+            // Parse CSV and import items
+            const lines = text.split('\n');
+            const items = [];
+            
+            for (let i = 1; i < lines.length; i++) { // Skip header
+                const [name, itemNumber, category, minStock, maxStock] = lines[i].split(',');
+                if (name && itemNumber) {
+                    items.push({
+                        name: name.trim(),
+                        item_number: itemNumber.trim(),
+                        category: category.trim(),
+                        min_stock_level: parseInt(minStock || '0'),
+                        max_stock_level: parseInt(maxStock || '1000')
+                    });
+                }
+            }
+
+            // Import items via API
+            for (const item of items) {
+                try {
+                    await this.apiService.makeRequest('/items', {
+                        method: 'POST',
+                        body: JSON.stringify(item)
+                    });
+                } catch (error) {
+                    console.error('Failed to import item:', item.name, error);
+                }
+            }
+
+            alert(`Imported ${items.length} items successfully!`);
+        };
+        
+        csvFile.click();
+    }
+}
+
+// Initialize admin interface
+window.addEventListener('DOMContentLoaded', () => {
+    new WarehouseAdmin();
+});
+
+================================================================================
+7. SYSTEM UPDATES & MAINTENANCE
+================================================================================
+
+Regular Maintenance Tasks:
+
+1. Database Maintenance:
+   - Run daily inventory reconciliation
+   - Archive old transaction records
+   - Update inventory statistics
+   - Backup database regularly
+
+2. Data Cleanup:
+   - Remove cancelled orders older than 30 days
+   - Archive completed orders older than 1 year
+   - Clean up temporary files and logs
+
+3. Performance Optimization:
+   - Monitor API response times
+   - Optimize database queries
+   - Update indexes as needed
+   - Cache frequently accessed data
+
+4. Security Updates:
+   - Rotate JWT secrets regularly
+   - Update dependencies
+   - Review user access permissions
+   - Monitor for suspicious activity
+
+Automated Scripts:
+
+Daily Maintenance Script (SQL):
+-- Update inventory statistics
+UPDATE warehouses 
+SET current_utilization = (
+    SELECT COALESCE(SUM(current_quantity), 0) 
+    FROM inventory 
+    WHERE warehouse_id = warehouses.id
+) / capacity * 100;
+
+-- Generate daily metrics
+INSERT INTO dashboard_metrics (metric_name, metric_value, date_recorded)
+SELECT 
+    'total_inventory',
+    SUM(current_quantity),
+    CURRENT_DATE
+FROM inventory;
+
+-- Clean up old logs
+DELETE FROM inventory_transactions 
+WHERE created_at < NOW() - INTERVAL '90 days';
+
+Backup Script:
+#!/bin/bash
+# Database backup script
+DATE=$(date +%Y%m%d_%H%M%S)
+BACKUP_FILE="supply_chain_backup_$DATE.sql"
+
+pg_dump -h localhost -U username -d supply_chain_db > $BACKUP_FILE
+gzip $BACKUP_FILE
+
+# Upload to cloud storage
+aws s3 cp $BACKUP_FILE.gz s3://your-backup-bucket/
+
+# Keep only last 30 days of backups
+find . -name "supply_chain_backup_*.sql.gz" -mtime +30 -delete
+
+================================================================================
+8. SECURITY CONSIDERATIONS
+================================================================================
+
+API Security:
+1. Use HTTPS only in production
+2. Implement JWT token expiration (15-30 minutes)
+3. Use refresh tokens for long-term access
+4. Rate limiting on API endpoints
+5. Input validation and sanitization
+6. SQL injection prevention
+7. CORS configuration
+
+Database Security:
+1. Use connection pooling
+2. Encrypt sensitive data at rest
+3. Regular security patches
+4. Database user permissions (principle of least privilege)
+5. Connection encryption (SSL/TLS)
+6. Audit logs for sensitive operations
+
+Frontend Security:
+1. XSS prevention
+2. CSRF protection
+3. Secure token storage
+4. Content Security Policy headers
+5. Input validation
+
+Access Control:
+1. Role-based access control (RBAC)
+2. API endpoint protection
+3. Resource-level permissions
+4. Audit trails for all actions
+5. Session management
+
+================================================================================
+9. DEPLOYMENT & SCALING
+================================================================================
+
+Deployment Options:
+
+Option A: Cloud Deployment (Recommended)
+- Frontend: Netlify/Vercel/AWS CloudFront
+- Backend: AWS Lambda/Google Cloud Functions
+- Database: AWS RDS/Google Cloud SQL
+- File Storage: AWS S3/Google Cloud Storage
+
+Option B: Container Deployment
+- Docker containers for backend services
+- Kubernetes for orchestration
+- PostgreSQL in container or managed service
+- Nginx as reverse proxy
+
+Option C: Traditional Server
+- VPS/Dedicated server
+- PM2 for Node.js process management
+- Nginx as reverse proxy
+- PostgreSQL database
+
+Scaling Considerations:
+1. Database connection pooling
+2. Redis for caching
+3. Load balancing for multiple backend instances
+4. CDN for static assets
+5. Database read replicas
+6. Horizontal scaling of API services
+
+Monitoring:
+1. Application performance monitoring (APM)
+2. Database performance monitoring
+3. Error tracking (Sentry/Rollbar)
+4. Uptime monitoring
+5. Log aggregation
+
+================================================================================
+10. TROUBLESHOOTING & SUPPORT
+================================================================================
+
+Common Issues and Solutions:
+
+Issue: API connection timeouts
+Solution: 
+- Check network connectivity
+- Increase timeout values
+- Implement retry logic
+- Check server resources
+
+Issue: Database connection errors
+Solution:
+- Verify database credentials
+- Check connection limits
+- Restart database service
+- Review connection pooling settings
+
+Issue: Authentication failures
+Solution:
+- Verify JWT secret configuration
+- Check token expiration times
+- Validate user credentials
+- Review CORS settings
+
+Issue: Slow dashboard loading
+Solution:
+- Implement data caching
+- Optimize database queries
+- Add database indexes
+- Use pagination for large datasets
+
+Issue: Inventory sync problems
+Solution:
+- Check API endpoint responses
+- Verify data format consistency
+- Implement error handling
+- Add data validation
+
+Logging Configuration:
+
+Create: logger.js
+const winston = require('winston');
+
+const logger = winston.createLogger({
+    level: 'info',
+    format: winston.format.combine(
+        winston.format.timestamp(),
+        winston.format.json()
+    ),
+    transports: [
+        new winston.transports.File({ filename: 'error.log', level: 'error' }),
+        new winston.transports.File({ filename: 'combined.log' }),
+        new winston.transports.Console({
+            format: winston.format.simple()
+        })
+    ]
+});
+
+module.exports = logger;
+
+Usage in API endpoints:
+logger.info('Warehouse created', { warehouseId: req.body.id, userId: req.user.id });
+logger.error('Database connection failed', { error: err.message });
+
+Support Documentation:
+1. API documentation with Swagger/OpenAPI
+2. Database schema documentation
+3. Frontend component documentation
+4. Deployment guides
+5. Troubleshooting FAQs
+
+Contact Information:
+- Technical Support: support@yourdomain.com
+- Developer Documentation: docs.yourdomain.com
+- Issue Tracking: github.com/yourorg/supply-chain-dashboard
+
+================================================================================
+
+This guide provides comprehensive instructions for integrating a full backend 
+system with your supply chain dashboard. Follow the steps in order, and adapt 
+the code examples to your specific technology stack and requirements.
+
+For additional support or custom implementation assistance, please contact your 
+development team or refer to the official documentation of your chosen backend 
+framework.
+
+Last Updated: 2024-01-01
+Version: 1.0
+================================================================================

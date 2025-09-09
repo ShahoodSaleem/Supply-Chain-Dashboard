@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Supply Chain Dashboard</title>
+    <link rel="stylesheet" href="styles/dashboard.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- <script src="js/access-control.js"></script> -->
+    <!-- <script src="js/access-control-v2.js"></script> -->
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Mobile Sidebar Overlay -->
+        <div class="sidebar-overlay" id="sidebarOverlay"></div>
+        
+        <!-- Sidebar Navigation -->
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <i class="fas fa-shipping-fast"></i>
+                <h2>Supply Chain</h2>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="#overview" class="nav-link active"><i class="fas fa-tachometer-alt"></i> Overview</a></li>
+                <li><a href="#forecast" class="nav-link"><i class="fas fa-chart-line"></i> Supply Forecast</a></li>
+                <li><a href="#news" class="nav-link"><i class="fas fa-newspaper"></i> News</a></li>
+                <li><a href="#charts" class="nav-link"><i class="fas fa-chart-bar"></i> Supply & Demand</a></li>
+                <li><a href="#logistics" class="nav-link"><i class="fas fa-truck"></i> Logistics</a></li>
+                <li><a href="#leadtimes" class="nav-link"><i class="fas fa-clock"></i> Lead Times</a></li>
+                <li><a href="#warehouse" class="nav-link"><i class="fas fa-building"></i> Warehouse</a></li>
+                <li><a href="#inventory" class="nav-link"><i class="fas fa-warehouse"></i> Inventory</a></li>
+            </ul>
+            <div class="sidebar-footer">
+                <button id="logoutBtn" class="logout-btn">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </button>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="header">
+                <div class="header-left">
+                    <button class="hamburger-menu" id="hamburgerMenu">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <h1>Supply Chain Dashboard</h1>
+                </div>
+                <div class="user-info">
+                    <span id="welcomeMessage">Welcome, User</span>
+                    <i class="fas fa-user-circle"></i>
+                </div>
+            </header>
+
+            <!-- Dashboard Content -->
+            <div class="dashboard-content">
+                <!-- Overview Section -->
+                <section id="overview" class="section active">
+                    <div class="metrics-grid">
+                        <div class="metric-card">
+                            <i class="fas fa-box"></i>
+                            <h3>Total Inventory</h3>
+                            <p class="metric-value">12,450</p>
+                            <span class="metric-change positive">+5.2%</span>
+                        </div>
+                        <div class="metric-card">
+                            <i class="fas fa-shipping-fast"></i>
+                            <h3>Active Shipments</h3>
+                            <p class="metric-value">248</p>
+                            <span class="metric-change negative">-2.1%</span>
+                        </div>
+                        <div class="metric-card">
+                            <i class="fas fa-clock"></i>
+                            <h3>Avg Lead Time</h3>
+                            <p class="metric-value">14.2 days</p>
+                            <span class="metric-change positive">-1.5%</span>
+                        </div>
+                        <div class="metric-card">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <h3>Critical Alerts</h3>
+                            <p class="metric-value">7</p>
+                            <span class="metric-change negative">+2</span>
+                        </div>
+                    </div>
+                    
+                    <!-- At a Glance Section -->
+                    <div class="at-glance-section">
+                        <h2 class="section-title">At a Glance</h2>
+                        <div class="glance-grid">
+                            <!-- Performance Indicators -->
+                            <div class="glance-card performance">
+                                <div class="glance-header">
+                                    <i class="fas fa-chart-line"></i>
+                                    <h3>Performance</h3>
+                                </div>
+                                <div class="glance-stats">
+                                    <div class="stat-item">
+                                        <span class="stat-label">On-Time Delivery</span>
+                                        <div class="progress-bar">
+                                            <div class="progress-fill" style="width: 85%;"></div>
+                                        </div>
+                                        <span class="stat-value">85%</span>
+                                    </div>
+                                    <div class="stat-item">
+                                        <span class="stat-label">Order Accuracy</span>
+                                        <div class="progress-bar">
+                                            <div class="progress-fill" style="width: 92%;"></div>
+                                        </div>
+                                        <span class="stat-value">92%</span>
+                                    </div>
+                                    <div class="stat-item">
+                                        <span class="stat-label">Supplier Rating</span>
+                                        <div class="progress-bar">
+                                            <div class="progress-fill" style="width: 78%;"></div>
+                                        </div>
+                                        <span class="stat-value">78%</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Operational Status -->
+                            <div class="glance-card operations">
+                                <div class="glance-header">
+                                    <i class="fas fa-cogs"></i>
+                                    <h3>Operations</h3>
+                                </div>
+                                <div class="operations-grid">
+                                    <div class="op-item">
+                                        <div class="op-icon warehouses">
+                                            <i class="fas fa-warehouse"></i>
+                                        </div>
+                                        <div class="op-details">
+                                            <span class="op-count">12</span>
+                                            <span class="op-label">Warehouses</span>
+                                        </div>
+                                    </div>
+                                    <div class="op-item">
+                                        <div class="op-icon suppliers">
+                                            <i class="fas fa-handshake"></i>
+                                        </div>
+                                        <div class="op-details">
+                                            <span class="op-count">245</span>
+                                            <span class="op-label">Suppliers</span>
+                                        </div>
+                                    </div>
+                                    <div class="op-item">
+                                        <div class="op-icon routes">
+                                            <i class="fas fa-route"></i>
+                                        </div>
+                                        <div class="op-details">
+                                            <span class="op-count">89</span>
+                                            <span class="op-label">Active Routes</span>
+                                        </div>
+                                    </div>
+                                    <div class="op-item">
+                                        <div class="op-icon orders">
+                                            <i class="fas fa-clipboard-list"></i>
+                                        </div>
+                                        <div class="op-details">
+                                            <span class="op-count">1,247</span>
+                                            <span class="op-label">Orders Today</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Financial Overview -->
+                            <div class="glance-card financial">
+                                <div class="glance-header">
+                                    <i class="fas fa-dollar-sign"></i>
+                                    <h3>Financial</h3>
+                                </div>
+                                <div class="financial-stats">
+                                    <div class="finance-item">
+                                        <span class="finance-label">Monthly Revenue</span>
+                                        <span class="finance-value positive">$2.4M</span>
+                                        <span class="finance-change">↗ 8.5%</span>
+                                    </div>
+                                    <div class="finance-item">
+                                        <span class="finance-label">Operating Costs</span>
+                                        <span class="finance-value">$1.8M</span>
+                                        <span class="finance-change neutral">→ 0.2%</span>
+                                    </div>
+                                    <div class="finance-item">
+                                        <span class="finance-label">Savings</span>
+                                        <span class="finance-value positive">$180K</span>
+                                        <span class="finance-change">↗ 12%</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Risk Assessment -->
+                            <div class="glance-card risks">
+                                <div class="glance-header">
+                                    <i class="fas fa-shield-alt"></i>
+                                    <h3>Risk Assessment</h3>
+                                </div>
+                                <div class="risk-items">
+                                    <div class="risk-item low">
+                                        <div class="risk-indicator"></div>
+                                        <span class="risk-label">Supply Disruption</span>
+                                        <span class="risk-level">Low</span>
+                                    </div>
+                                    <div class="risk-item medium">
+                                        <div class="risk-indicator"></div>
+                                        <span class="risk-label">Price Volatility</span>
+                                        <span class="risk-level">Medium</span>
+                                    </div>
+                                    <div class="risk-item high">
+                                        <div class="risk-indicator"></div>
+                                        <span class="risk-label">Weather Impact</span>
+                                        <span class="risk-level">High</span>
+                                    </div>
+                                    <div class="risk-item low">
+                                        <div class="risk-indicator"></div>
+                                        <span class="risk-label">Quality Issues</span>
+                                        <span class="risk-level">Low</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Supply Forecast Section -->
+                <section id="forecast" class="section">
+                    <h2>Supply Forecast</h2>
+                    <div class="chart-container">
+                        <canvas id="forecastChart"></canvas>
+                    </div>
+                    <div class="forecast-insights">
+                        <div class="insight-card">
+                            <h4>Next Month Prediction</h4>
+                            <p>Supply levels expected to increase by 15% based on seasonal trends.</p>
+                        </div>
+                        <div class="insight-card">
+                            <h4>Risk Factors</h4>
+                            <p>Weather conditions may impact transportation in Q4.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- News Section -->
+                <section id="news" class="section">
+                    <h2>Supply Chain News</h2>
+                    <div class="news-container">
+                        <div class="news-item">
+                            <div class="news-header">
+                                <h4>Global Shipping Rates See 12% Increase</h4>
+                                <span class="news-date">2 hours ago</span>
+                            </div>
+                            <p>Rising fuel costs and port congestion contribute to increased shipping rates across major trade routes.</p>
+                        </div>
+                        <div class="news-item">
+                            <div class="news-header">
+                                <h4>New Trade Agreement Signed</h4>
+                                <span class="news-date">5 hours ago</span>
+                            </div>
+                            <p>The new bilateral trade agreement is expected to reduce import duties by 8% starting next quarter.</p>
+                        </div>
+                        <div class="news-item">
+                            <div class="news-header">
+                                <h4>AI-Powered Logistics Platform Launches</h4>
+                                <span class="news-date">1 day ago</span>
+                            </div>
+                            <p>Revolutionary AI platform promises to optimize supply chain routes and reduce delivery times by 25%.</p>
+                        </div>
+                        <div class="news-item">
+                            <div class="news-header">
+                                <h4>Semiconductor Shortage Update</h4>
+                                <span class="news-date">2 days ago</span>
+                            </div>
+                            <p>Industry experts predict semiconductor supply will stabilize in the next 6-8 months.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Supply & Demand Charts Section -->
+                <section id="charts" class="section">
+                    <h2>Supply & Demand Analytics</h2>
+                    <div class="charts-grid">
+                        <div class="chart-card">
+                            <h3>Supply vs Demand</h3>
+                            <canvas id="supplyDemandChart"></canvas>
+                        </div>
+                        <div class="chart-card">
+                            <h3>Regional Distribution</h3>
+                            <canvas id="regionalChart"></canvas>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Logistics Section -->
+                <section id="logistics" class="section">
+                    <h2>Logistics Management</h2>
+                    <div class="logistics-grid">
+                        <div class="logistics-card">
+                            <h3>Active Routes</h3>
+                            <div class="route-list">
+                                <div class="route-item">
+                                    <span class="route-id">RT-001</span>
+                                    <span class="route-path">NYC → LA</span>
+                                    <span class="route-status in-transit">In Transit</span>
+                                </div>
+                                <div class="route-item">
+                                    <span class="route-id">RT-002</span>
+                                    <span class="route-path">CHI → MIA</span>
+                                    <span class="route-status delayed">Delayed</span>
+                                </div>
+                                <div class="route-item">
+                                    <span class="route-id">RT-003</span>
+                                    <span class="route-path">SEA → DEN</span>
+                                    <span class="route-status delivered">Delivered</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="logistics-card">
+                            <h3>Fleet Status</h3>
+                            <div class="fleet-stats">
+                                <div class="fleet-item">
+                                    <i class="fas fa-truck"></i>
+                                    <span>Trucks: 45/50 Active</span>
+                                </div>
+                                <div class="fleet-item">
+                                    <i class="fas fa-ship"></i>
+                                    <span>Ships: 12/15 Active</span>
+                                </div>
+                                <div class="fleet-item">
+                                    <i class="fas fa-plane"></i>
+                                    <span>Air: 8/10 Active</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Lead Times Section -->
+                <section id="leadtimes" class="section">
+                    <h2>Lead Times Tracking</h2>
+                    <div class="leadtime-container">
+                        <div class="leadtime-chart">
+                            <canvas id="leadTimeChart"></canvas>
+                        </div>
+                        <div class="leadtime-table">
+                            <h3>Current Lead Times by Category</h3>
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Category</th>
+                                        <th>Current</th>
+                                        <th>Target</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>Raw Materials</td>
+                                        <td>12 days</td>
+                                        <td>10 days</td>
+                                        <td class="status-warning">Above Target</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Electronics</td>
+                                        <td>8 days</td>
+                                        <td>9 days</td>
+                                        <td class="status-good">On Target</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Textiles</td>
+                                        <td>6 days</td>
+                                        <td>7 days</td>
+                                        <td class="status-good">Below Target</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Warehouse Section -->
+                <section id="warehouse" class="section">
+                    <h2>Warehouse Management</h2>
+                    
+                    <!-- Warehouse Overview Cards -->
+                    <div class="warehouse-overview">
+                        <div class="warehouse-stats">
+                            <div class="warehouse-stat-card">
+                                <i class="fas fa-building"></i>
+                                <div class="stat-info">
+                                    <h3>12</h3>
+                                    <p>Active Warehouses</p>
+                                </div>
+                            </div>
+                            <div class="warehouse-stat-card">
+                                <i class="fas fa-boxes"></i>
+                                <div class="stat-info">
+                                    <h3>24,567</h3>
+                                    <p>Total Items</p>
+                                </div>
+                            </div>
+                            <div class="warehouse-stat-card">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                <div class="stat-info">
+                                    <h3>15</h3>
+                                    <p>Low Stock Items</p>
+                                </div>
+                            </div>
+                            <div class="warehouse-stat-card">
+                                <i class="fas fa-truck-loading"></i>
+                                <div class="stat-info">
+                                    <h3>38</h3>
+                                    <p>Pending Orders</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Warehouse Filter Controls -->
+                    <div class="warehouse-controls">
+                        <div class="control-group">
+                            <label for="warehouseSelect">Select Warehouse:</label>
+                            <select id="warehouseSelect" class="warehouse-select">
+                                <option value="all">All Warehouses</option>
+                                <option value="WH001">NYC Central (WH001)</option>
+                                <option value="WH002">LA West Coast (WH002)</option>
+                                <option value="WH003">Chicago Midwest (WH003)</option>
+                                <option value="WH004">Miami Southeast (WH004)</option>
+                                <option value="WH005">Dallas Southwest (WH005)</option>
+                            </select>
+                        </div>
+                        <div class="control-group">
+                            <label for="statusFilter">Filter by Status:</label>
+                            <select id="statusFilter" class="status-select">
+                                <option value="all">All Status</option>
+                                <option value="in-route">In Route</option>
+                                <option value="ordered">Ordered</option>
+                                <option value="need-order">Need Order</option>
+                            </select>
+                        </div>
+                        <div class="control-group">
+                            <label for="searchItems">Search Items:</label>
+                            <div class="search-wrapper">
+                                <input type="text" id="searchItems" class="search-input" placeholder="Search items...">
+                                <button class="search-btn"><i class="fas fa-search"></i></button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Warehouse Inventory Table -->
+                    <div class="warehouse-table-container">
+                        <table id="warehouseTable" class="warehouse-table">
+                            <thead>
+                                <tr>
+                                    <th>Warehouse</th>
+                                    <th>Item Name</th>
+                                    <th>Item Number</th>
+                                    <th>Quantity</th>
+                                    <th>Next Supply Due</th>
+                                    <th>Supply Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="warehouseTableBody">
+                                <!-- Data populated by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Warehouse Details Modal (Hidden by default) -->
+                    <div id="warehouseModal" class="warehouse-modal" style="display: none;">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h3 id="modalTitle">Item Details</h3>
+                                <button class="modal-close" onclick="closeWarehouseModal()">×</button>
+                            </div>
+                            <div class="modal-body" id="modalBody">
+                                <!-- Content populated by JavaScript -->
+                            </div>
+                            <div class="modal-footer">
+                                <button class="btn-secondary" onclick="closeWarehouseModal()">Close</button>
+                                <button class="btn-primary" onclick="updateSupplyOrder()">Update Order</button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Inventory Section -->
+                <section id="inventory" class="section">
+                    <h2>Inventory Management</h2>
+                    <div class="inventory-grid">
+                        <div class="inventory-overview">
+                            <h3>Inventory Levels</h3>
+                            <canvas id="inventoryChart"></canvas>
+                        </div>
+                        <div class="inventory-alerts">
+                            <h3>Critical Stock Alerts</h3>
+                            <div class="alert-list">
+                                <div class="alert-item critical">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    <div>
+                                        <strong>Product A-001</strong>
+                                        <p>Stock: 50 units (Critical Low)</p>
+                                    </div>
+                                </div>
+                                <div class="alert-item warning">
+                                    <i class="fas fa-exclamation-circle"></i>
+                                    <div>
+                                        <strong>Product B-205</strong>
+                                        <p>Stock: 150 units (Low)</p>
+                                    </div>
+                                </div>
+                                <div class="alert-item info">
+                                    <i class="fas fa-info-circle"></i>
+                                    <div>
+                                        <strong>Product C-340</strong>
+                                        <p>Reorder scheduled for next week</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <script src="js/dashboard.js"></script>
+</body>
+</html>

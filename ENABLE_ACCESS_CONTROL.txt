@@ -1,0 +1,17 @@
+How to Re-enable Access Control:
+
+1. Edit index.html:
+   Change: <!-- <script src="js/access-control-v2.js"></script> -->
+   To: <script src="js/access-control-v2.js"></script>
+
+2. Edit dashboard.html:
+   Add: <script src="js/access-control-v2.js"></script>
+
+3. Re-upload to Netlify
+
+4. Use these URLs to access:
+   - Demo: yoursite.com/index.html?access=sc2024demo
+   - Admin: yoursite.com/index.html?access=sc2024admin
+   - Manager: yoursite.com/index.html?access=sc2024manager
+
+5. Admin Panel: yoursite.com/admin.html (generate access links)
