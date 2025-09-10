@@ -25,39 +25,7 @@ A comprehensive supply chain management dashboard with secure authentication and
 - Smooth animations and transitions
 - Interactive charts using Chart.js
 
-## Demo Credentials
-
-Use any of these credentials to access the dashboard:
-
-| User ID    | Password    | Role       |
-|------------|-------------|------------|
-| admin      | supply123   | Administrator |
-| manager    | chain456    | Manager    |
-| supervisor | logistics789| Supervisor |
-| analyst    | forecast123 | Analyst    |
-
-## File Structure
-
-```
-supply-chain-website/
-├── index.html          # Login page
-├── dashboard.html      # Main dashboard
-├── styles/
-│   ├── login.css      # Login page styling
-│   └── dashboard.css   # Dashboard styling
-├── js/
-│   ├── auth.js        # Authentication system
-│   └── dashboard.js   # Dashboard functionality & charts
-└── README.md          # This file
-```
-
 ## Setup Instructions
-
-1. **Download or clone the project**
-   ```bash
-   git clone [repository-url]
-   cd supply-chain-website
-   ```
 
 2. **Open the website**
    - Simply open `index.html` in your web browser
@@ -182,3 +150,4 @@ This project is created for demonstration purposes. Feel free to use and modify 
 ## Support
 
 For questions or issues, please refer to the documentation or contact the development team.
+
